@@ -253,6 +253,7 @@ Let's talk about the built in types.
 * Float
 * Integral
 
+#####EQ
 
 The `Eq` type is pretty straightforward. It simply requires that any instance of this type class define functions for assessing `==` and `/=`. If you've ever written a `__eq__` method for a custom class in python then you're pretty much caught up.
 
@@ -265,7 +266,11 @@ The `Eq` type is pretty straightforward. It simply requires that any instance of
     compare 4 2
     -- GT
 
+#####SHOW
+
 `Show` is another type class is another one that is pretty parallel to a function in Python, the `__repr__` or `__unicode__` functions. Basically an instance of this type class will define a `show` method that represents the data as a string.
+
+#####READ
 
 `Read` is the first one we run across that's a bit complicated. It is intuitively kind of the opposite of the `Show` type class, however due to type inference there are some odd behaviors.
 
@@ -288,6 +293,8 @@ Haskell's type inference can also utilize the fact that lists are homogenous in 
     read "1" : [2,3,4]
     -- [1,2,3,4]
 
+#####ENUM
+
 `Enum` is another type class that seems at first glance to basically be a restatement of `ord` since something that can be ordered seems to be something that could be enumerated. The difference as helpfully described in [this](http://stackoverflow.com/a/11495848) StackOverflow answer is that `enum` is for types that can map to integers, i.e. they have a definite predecessor and successor, whereas something like (borrowing from the SO answer) floating point decimals are orderable but don't have a single defined successor or predecessor. The nice thing 
 
 If you want to see some odd behavior with asking floats to behave like `enum`s try the following:
@@ -308,11 +315,19 @@ Stranger still:
 
 It seems like it will return the first number incremented by 1.0 the number of times it would take to return the same size list as the list would be returned by a truncated integer version of the beginning and end numbers, but that seems more like an implication rather than a design rationale.
 
+#####BOUNDED
+
 `Bounded` implies that the type has a `maxBound` and `minBound`.
+
+#####NUM
 
 `Num` means a type can act like a number. Examples of types of this class are `Int`s, `Float`s, and `Integer`s. Must also be in the `Eq` and `Show` typeclasses in order to be a `Num`.
 
+#####FLOATING
+
 `Floating` is the typeclass that contains `Float` and `Double`.
+
+#####INTEGRAL
 
 `Integral` is the typeclass that contains `Int`, `Integer`. LYAHFGG points out the `fromIntegral` function as particularly useful to make `Integral`s play nicely with other numeric types by converting them to a more generic.
 
