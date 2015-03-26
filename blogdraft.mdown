@@ -1,0 +1,322 @@
+**Why?**
+
+Over Christmas I have been messing around with Haskell. I come from a mostly Python and Ruby knowledge base and I generally default to Python for projects since I am most comfortable in it and it has yet to really disappoint in terms of the language features, available libraries, and the community. It also has the ostensibly trivial (but very dear to me) attribute of having pleasant looking source code.
+
+I am currently working on a signal processing/machine learning project with another developer who wrote the initial version on his own. It is rather complex and there was (is?) a lot of experimental (and dead) code, variable names which had become far detached from the objects they described, and some "fuck it, just make this work" code. None of this is to disparage my colleague, it does indeed execute a non-trivial task correctly and quickly, and had I wrote the initial version it certainly would have been scarier. I have the easy job of doing a bit of refactoring to make it easy to expand.
+
+I did a very thorough read of the existing code and spent a lot of time with ipdb over the past week to see exactly how it was working. Oddly for someone accustomed to the flexibility and power of dynamically typed languages, I found myself wishing that Python ruthlessly enforced types in order to make comprehension simpler. The data we are operating on is massive and not terribly easy to distinguish via print statement debugging or in ipdb.
+
+A mixture of the need to refactor, the desire for static typing, and some well timed HN articles made me take a look at Haskell. I'm mostly learning through [Learn You a Haskell For Great Good](http://learnyouahaskell.com/chapters) as well as [LearnXinYMinutes.com](learnxinyminutes.com/docs/haskell). These are great resources and I highly suggest them. My post is not meant to get to LYAHFGG's level as I am by no means an expert on Haskell, but I want to be a bit more verbose than LearnXinYMinutes, not for any particular pedagogical reason but mostly in order to consolidate my own understanding and to take advantage of [Cunningham's Law](http://meta.wikimedia.org/wiki/Cunningham%27s_Law) to correct my inevitable misunderstandings and accidental misinformation.
+
+**Initial Thoughts**
+
+#### General Syntax/Impressions
+
+    Sparse, Dense, No braces, no tabs? Madness!
+
+###### First Thoughts
+
+Something Here
+
+##### Function Type Declarations
+
+Because fucking magic [read further], Haskell actually only has functions that take one parameter due to exquisite use of currying. The syntactic sugar of sane functions with multiple inputs is apparently an illusion. 
+
+One weird result of this is that function definitions initially look odd. When explicitly defining the function signature you need to define the inputs and outputs, which is not particularly odd, in fact it's pretty standard in most statically typed languages. The weird part comes in that the return value doesn't seem different than the input values as far as notation is concerned except for being last. The first LYAHFGG example is:
+
+    addThree :: Int -> Int -> Int -> Int
+
+It could just loook odd to me but Initially I have trouble understanding why the last `Int` is different from the first `Int`. The apparent answer comes in the (Higher Order Functions)[http://learnyouahaskell.com/higher-order-functions] section where it is exposed that multi-parameter functions are lies, all goddamned lies. Multi-parameter functions apparently simply return a series of nested single parameter curried functions.
+
+##### Function Definitions
+
+Haskell has a few interesting pieces to its syntax declaration syntax. Declaration can range from simple to extremely detailed and has interesting patterns for branching, conditional execution, and local variable assignment. Among these are pattern matching, guards, where/let statements, and case expressions.
+
+*Simple Function Declaration*
+
+Haskell is smart enough to do type inferences and allow you to program simple functions like this:
+
+    fooTwo x = x * 2
+
+*More Explicit Function Declaration*
+
+However LYAHFGG suggests, and it is easy to see, that explicitly typing your functions is a best practice as opposed to relying upon type inference. For those coming from Python, think explicit is better than implicit. A more thorogh way to write this is below.
+
+    fooTwo :: int -> int
+    fooTwo x = x * 2
+
+**Interesting Constructs**
+
+*Pattern Matching* is an interesting construct and at least for me was a bit confusing at first. Pattern matching does two things: selects what to do with the function inputs, and a little more subtly, it deconstructs the inputs and binds them in the local scope. I think the thing that initially confused me was this dual functionality. C.A. McCann's [StackOverflow answer](http://stackoverflow.com/a/4156831/2002580) was the thing that really got it to click for me. Outis' answer [here](http://stackoverflow.com/a/2225811) was also helpful but might mean more for those with a more formal math education.
+
+This is the general layout of a basic function definition. `inputTypes` are separated by `->`.
+
+    funcName :: [inputTypes] -> outputType
+    funcName [inputNames] = {doSomething}
+
+    -- OR
+    
+    funcName :: [inputTypes] -> outputType
+    funcName [inputNames]
+        | someInput <= someThing      = something
+        | someInput <= someOtherThing = somethingElse
+        | otherwise                   = somethingElseEntirely
+
+        where someThing               = valX
+              someOtherThing          = valY
+
+    -- OR
+
+    funcName :: [inputTypes] -> outputType
+    funcName [inputNames]
+
+
+
+#### List Comprehensions
+
+    Holy shit, even more than in Python! 
+
+Basic list comprehension syntax is not crazy foreign compared to Python.
+
+    [x*2 | x <- [1..10]]
+    -- [2,4,6,8,10,12,14,16,18,20]
+
+Declare your inner loop variable on the right side of the pipe and the logic to be applied on the left side of the pipe. Easy day.
+
+Let's say we don't care about the odd numbers. In Python we would do something like 
+
+    [2 * x for x in range(11) if not x % 2]
+    # [0, 4, 8, 12, 16, 20]
+
+In Haskell we can filter the list with predicates, which are applied similarly.
+
+    [2 * x | x <- [0..10], mod x 2 == 0]
+    -- [0,4,8,12,16,20]
+
+Or more than one predicate
+
+    [2 * x | x <- [0..20], mod x 2 == 0, mod x 3 == 0]
+
+You can also apply ternary logic inside the operation to be applied. Let's multiple evens by two and odds by three, but only above 5 (because why not).
+
+    [if mod x 2 == 0 then 2 * x else 3 * x | x <- [0..10], x > 5]
+    -- [12,21,16,27,20]
+
+One convenience in Haskell is the easy syntax to save a list comprehension as a function.
+
+    evenTwoOddThree xs = [if mod x 2 == 0 then 2 * x else 3 * x | x <- xs]  
+
+
+#### Pattern Matching Functions
+
+    Like programming via really abstract regex!
+
+So Pattern Matching seems to me one of those concepts that appears sensible at first, then appears mysterious again, and then someday in the future I will really truly come to understand them.
+
+The most analogous thing I can think of in Python or other languages would be a case statement, except it's part of the syntax of the language and has several interesting features that make it a nice way to organize functions. 
+
+    myFunction :: Int -> String
+    myFunction 7 = "WOOHOO"
+    myFunction x = "Bummer, " ++ show x
+
+So here if the input Int matches the literal `Int` 7 then it will return "WOOHOO" else "Bummer". The interesting thing is that it also binds the input `Int` to `x`. Since we don't do anything with this `Int` we could also write this as 
+
+    myFunction :: Int -> String
+    myFunction 7 = "WOOHOO"
+    myFunction _ = "Bummer"
+
+which will indicate that the input is to be simply ignored and not bound to anything.
+
+If that were all there were to pattern matching it wouldn't be terribly interesting, but as luck would have it there is more. We can use pattern matching to unpackage data from tuples and lists and bind the components to some variables for use in the resulting action. LYAHFGG uses the example of a vector adding function.
+
+    addVector :: (Double, Double) -> (Double, Double) -> (Double, Double)
+    addVector (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
+
+Here we get to unpackage the input tuples in the pattern matching so we don't have to do it later in the function.
+
+A common Haskell convention appears to be using pattern matching to grab the first element in a list and the remainder of the list using the idiom `x:xs`.
+
+    len' :: (Num b) => [a] -> b
+    len' [] = 0
+    len' (_:xs) = 1 + len' xs
+
+The `len'` function recursively counts the elements of a list by adding one to the `len'` of the remainder of the list (`xs`).
+
+There is also something called an "As Pattern" which can be used to bind chunks of the input data to a name, as well as assigning components within that chunk to separate names.
+
+    firstLetter :: String -> String
+    firstLetter "" = "There is no first letter"
+    firstLetter all@(x:xs) = "The first letter of " ++ all ++ " is " ++ [x]
+
+#### Guards
+
+    Like Pattern matching, but with logic!
+
+    Needs to have `otherwise` in order to be totally safe.
+
+Guards are similar in concept to pattern matching in that the structure allows you to utilize a specific function body depending upon the inputs, as well as that they are tested in order and the first match is executed to the exclusion of the others. They are different however in that they allow for boolean evaluation as opposed to pattern matching based on the structure of the input.
+
+For the sake of not repeating verbatim every example from LYAHFGG I am using a terrifically useless function called greaterThan5 to show guards. As the name might imply, it will take in an Integer and tell you if it is indeed greater than 5.
+
+    greaterThan5 :: Int -> Bool
+    greaterThan5 numUnderTest
+        | numUnderTest <= 5 = False
+        | otherwise = True
+
+The evaluations and corresponding function bodies are placed after pipes. The pipes must be indented by at least one space and each pipe must be vertically aligned with the others. Coming from Python and following Miran's advice, I have gone with 4 spaces since it visually makes the code easier to read.
+
+Additionally note that `otherwise` is a catchall allowing us to 
+
+
+#### Where Statements
+
+Guards and pattern matching also allow `where` statements which are convenient ways to allow deeper preprocessing of data and nested logic in a function. From my perspective `where` blocks make more intuitive sense with guards since the scoping rulse seem intuitively similar to Python, however you can also use them with pattern matching with slightly different scoping rules.
+
+    bmiTell :: (RealFloat a) => a -> a -> String
+    bmiTell weight height
+        | bmi <= under  = "Under"
+        | bmi <= normal = "Normal"
+        | bmi <= over   = "Over"
+        | otherwise     = "Way Over"
+
+        where bmi       = weight / height ^ 2
+              under     = 18.5
+              normal    = 25.0
+              over      = 30.0
+
+Here we get to utilize the local scope variable `bmi` and not need to repeat the definition in each guard statement resulting in less repetition and easier modifications. `bmi` will be available in any of the guard statements of the function in which it is defined. If you want to use `where` in a function managed by pattern matching then you limit its scope to a specific pattern.
+
+You may also have noticed that we can define functions in the `where` blocks (`where bmi = weight / height ^ 2`).
+
+    len' :: [a] -> Int
+    len' [] = 0
+    len' [x] = 1
+    len' theList = ln
+        where ln = length theList
+
+The above will work fine since `ln` is only used in the scope where it is declared.
+
+    len' :: [a] -> Int
+    len' [] = 0
+    len' [x] = ln
+    len' theList = ln
+        where ln = length theList
+
+This however will result in a Not in Scope error for ln since it is referenced in our second pattern without a corresponding where declaration in the same scope.
+
+#### Let bindings // In contexts
+
+    Declare values before the context, or ANYWHERE!
+    Let statements are expressions, ftw
+
+"let expressions take the form of let <bindings> in <expression>" -- LYAHFGG
+
+`let` expressions are of course expressions meaning you can stuff them pretty much anywhere. Additionally you can separate declarations with semicolons in order to declare more than one variable in a single line. 
+
+If you have a particular penchant for unreadable code you could even nest more `let` expressions inside the `in` expressions:
+
+    (let a = 1; b=4 in (a + b + (let c = 30 in c)))
+    -- 35
+
+Variables declared in `let` expressions cannot be used outside of the scope of the `in` expression, so although they can be used anywhere their limited scope limits their applicability. Miran points out a critical example: they cannot be used across guards.
+
+#### Folds
+
+    Like Map but better!
+
+    foldl (\acc x -> acc + x)   0               xs
+    --      binary function     start value     list to fold
+
+Let's break this down. The first argument after foldl is a lambda expression which returns a function that adds two arguments.
+
+    (\acc x -> acc + x)
+
+It also happens to be equivalent to `(+)`, go figure.
+
+The second argument is 0, which seems like a pretty good starting value for summation.
+
+The last argument `xs` is the list to be folded up using the `+` operator.
+
+###TYPES
+
+So types seem to be one of the concepts or even the concept at the heart of Haskell. I'm writing this as I go so I have nothing insightful yet.
+
+Let's talk about the built in types.
+
+* Eq
+* Ord
+* Show
+* Read
+* Enum
+* Bounded
+* Num
+* Float
+* Integral
+
+
+The `Eq` type is pretty straightforward. It simply requires that any instance of this type class define functions for assessing `==` and `/=`. If you've ever written a `__eq__` method for a custom class in python then you're pretty much caught up.
+
+`Ord` is a type class that requires the ordinal operations to be defined so that instances may be placed in some order. This that the type instance will have methods defined for the inequality operators (`<, >, <=, >=`) and will return `GT`, `LT`, or `EQ` for the `compare` function.
+
+    compare 2 4
+    -- LT
+    compare 4 4
+    -- EQ
+    compare 4 2
+    -- GT
+
+`Show` is another type class is another one that is pretty parallel to a function in Python, the `__repr__` or `__unicode__` functions. Basically an instance of this type class will define a `show` method that represents the data as a string.
+
+`Read` is the first one we run across that's a bit complicated. It is intuitively kind of the opposite of the `Show` type class, however due to type inference there are some odd behaviors.
+
+    read "4" + 5
+    -- 9
+    read "4"
+    -- *** Exception: Prelude.read: no parse
+
+So we're fine if we constrain the result of read to a certain type by using it because the compiler or interpreter can know what type to read it as. This might just be me being stupid, but I thought OK so it makes sense that `read "4"` could face that confusion since you might want an integer or a float, but what about `True` where your only real option is a Boolean? Pssst: it could also be possible that you would want the String `"True"`, there's no reason that a non-String type should be inherently preferred.
+
+If you don't want to act upon the thing being read in order to force Haskell to infer the type, you can use a type declaration to declare the destination type for the string being read.
+
+    read "5" :: Int
+    -- 5
+    read "5" :: Float
+    -- 5.0
+
+Haskell's type inference can also utilize the fact that lists are homogenous in order to correctly infer the type to read input as.
+    
+    read "1" : [2,3,4]
+    -- [1,2,3,4]
+
+`Enum` is another type class that seems at first glance to basically be a restatement of `ord` since something that can be ordered seems to be something that could be enumerated. The difference as helpfully described in [this](http://stackoverflow.com/a/11495848) StackOverflow answer is that `enum` is for types that can map to integers, i.e. they have a definite predecessor and successor, whereas something like (borrowing from the SO answer) floating point decimals are orderable but don't have a single defined successor or predecessor. The nice thing 
+
+If you want to see some odd behavior with asking floats to behave like `enum`s try the following:
+    
+    [1.0..5.12]
+    -- [1.0,2.0,3.0,4.0,5.0]
+    [1.12..5.12]
+    -- [1.12,2.12,3.12,4.12,5.12]
+    [1.11..5.0]
+    -- [1.11,2.1100000000000003,3.1100000000000003,4.11,5.11]
+
+I honestly don't know how Haskell is interpreting this but it seems to take the opinion that floats should be incremented by 1.0 from the initial slice starting point and up until the last iteration? But it can also overrun the higher limit of the list (`[1.11..5.0]` results in a list including the number `5.11`).
+
+Stranger still: 
+    
+    [1.11..5.8]
+    -- [1.11,2.1100000000000003,3.1100000000000003,4.11,5.11,6.11]
+
+It seems like it will return the first number incremented by 1.0 the number of times it would take to return the same size list as the list would be returned by a truncated integer version of the beginning and end numbers, but that seems more like an implication rather than a design rationale.
+
+`Bounded` implies that the type has a `maxBound` and `minBound`.
+
+`Num` means a type can act like a number. Examples of types of this class are `Int`s, `Float`s, and `Integer`s. Must also be in the `Eq` and `Show` typeclasses in order to be a `Num`.
+
+`Floating` is the typeclass that contains `Float` and `Double`.
+
+`Integral` is the typeclass that contains `Int`, `Integer`. LYAHFGG points out the `fromIntegral` function as particularly useful to make `Integral`s play nicely with other numeric types by converting them to a more generic.
+
+
+
+
+
